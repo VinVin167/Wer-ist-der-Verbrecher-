@@ -1,0 +1,83 @@
+import socket
+import threading
+
+players = {}
+detective = None
+num_players = 3
+game_started = False
+
+def send_question(player_name):
+    return input(f"Frage an {player_name}: ")
+
+def get_verdict(player_name):
+    return input(f"Ist {player_name} der Verbrecher? (ja/nein): ").lower()
+
+def handle_client(client_socket, player_name):
+    try:
+        while True:
+            question = send_question(player_name)
+            client_socket.send(question.encode('utf-8'))
+
+            answer = client_socket.recv(1024).decode('utf-8')
+            print(f"{player_name}'s Antwort: {answer}")
+
+            if player_name == detective:
+                verdict = get_verdict(player_name)
+
+                if verdict == "ja":
+                    print(f"Detektiv hat entschieden! {player_name} ist der Verbrecher.")
+                else:
+                    print(f"Detektiv hat entschieden! {player_name} ist unschuldig.")
+
+    except Exception as e:
+        print(f"Fehler bei der Kommunikation mit {player_name}: {str(e)}")
+
+    finally:
+        client_socket.close()
+        del players[player_name]
+        print(f"{player_name} wurde vom Spiel entfernt.")
+
+def wait_for_players():
+    global detective
+    while len(players) < num_players:
+        client, addr = server.accept()
+        name = input("Spielername eingeben: ")
+        while name in players.values():
+            print("Dieser Spielername ist bereits vergeben. Bitte wählen Sie einen anderen.")
+            name = input("Spielername eingeben: ")
+
+        players[name] = client
+
+        if detective is None:
+            detective = name
+
+        print(f"Verbunden mit {name}")
+        thread = threading.Thread(target=handle_client, args=(client, name))
+        thread.start()
+
+def run_server():
+    global join_link
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind(('0.0.0.0', 5555))
+    server.listen(5)
+
+    print("[*] Server gestartet")
+
+    try:
+        host_ip = input("Host-IP-Adresse eingeben: ")
+        host_port = 5555
+
+        join_link = f"http://{host_ip}:{host_port}"
+        print(f"Beitrittslink für Spieler: {join_link}")
+
+    except KeyboardInterrupt:
+        print("Server wird heruntergefahren.")
+    finally:
+        server.close()
+
+if __name__ == '__main__':
+    server_thread = threading.Thread(target=run_server)
+    server_thread.start()
+
+    wait_for_players()
