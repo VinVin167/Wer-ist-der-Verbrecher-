@@ -28,7 +28,7 @@ jobs:
           mkdir -p project
           unzip -q /tmp/northsea-source.zip -d project
 
-          cat northsea-build/056patch.part* | base64 --decode > /tmp/northsea-056-patch.zip
+          cat northsea-build/056patch.p00.* northsea-build/056patch.part0[1-7] | base64 --decode > /tmp/northsea-056-patch.zip
           unzip -t /tmp/northsea-056-patch.zip
           unzip -qo /tmp/northsea-056-patch.zip -d project
 
