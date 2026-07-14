@@ -34,6 +34,7 @@ jobs:
 
           python3 - <<'PY'
           from pathlib import Path
+          import base64
 
           root = Path('project')
 
@@ -82,51 +83,9 @@ jobs:
               text = text.replace(old, new)
           city.write_text(text, encoding='utf-8')
 
+          npc_source = 'cGFja2FnZSBkZXYudmluY2VudC5ub3J0aHNlYS5oYXJib3IubnBjOwoKaW1wb3J0IG5ldC5taW5lY3JhZnQuc291bmRzLlNvdW5kRXZlbnQ7CmltcG9ydCBuZXQubWluZWNyYWZ0LndvcmxkLmRhbWFnZXNvdXJjZS5EYW1hZ2VTb3VyY2U7CmltcG9ydCBuZXQubWluZWNyYWZ0LndvcmxkLmVudGl0eS5FbnRpdHlUeXBlOwppbXBvcnQgbmV0Lm1pbmVjcmFmdC53b3JsZC5lbnRpdHkubW9uc3Rlci56b21iaWUuWm9tYmllOwppbXBvcnQgbmV0Lm1pbmVjcmFmdC53b3JsZC5sZXZlbC5MZXZlbDsKCi8qKiBBIHBlcm1hbmVudCwgaHVtYW4tc2hhcGVkIE5vcnRoIFNlYSByZXNpZGVudCB3aXRoIG5vIHZhbmlsbGEgdmlsbGFnZXIgbW9kZWwgb3IgdHJhZGluZyBBSS4gKi8KcHVibGljIGZpbmFsIGNsYXNzIEhhcmJvck5wY0VudGl0eSBleHRlbmRzIFpvbWJpZSB7CiAgICBwdWJsaWMgSGFyYm9yTnBjRW50aXR5KEVudGl0eVR5cGU8PyBleHRlbmRzIFpvbWJpZT4gdHlwZSwgTGV2ZWwgbGV2ZWwpIHsKICAgICAgICBzdXBlcih0eXBlLCBsZXZlbCk7CiAgICAgICAgc2V0Tm9BaSh0cnVlKTsKICAgICAgICBzZXRJbnZ1bG5lcmFibGUodHJ1ZSk7CiAgICAgICAgc2V0UGVyc2lzdGVuY2VSZXF1aXJlZCgpOwogICAgfQoKICAgIEBPdmVycmlkZQogICAgcHVibGljIHZvaWQgdGljaygpIHsKICAgICAgICBzdXBlci50aWNrKCk7CiAgICAgICAgc2V0Tm9BaSh0cnVlKTsKICAgICAgICBzZXRSZW1haW5pbmdGaXJlVGlja3MoMCk7CiAgICAgICAgc2V0RGVsdGFNb3ZlbWVudCgwLjBELCBnZXREZWx0YU1vdmVtZW50KCkueSwgMC4wRCk7CiAgICAgICAgZmxvYXQgZmFjaW5nID0gZ2V0WVJvdCgpOwogICAgICAgIHNldFlIZWFkUm90KGZhY2luZyk7CiAgICAgICAgc2V0WUJvZHlSb3QoZmFjaW5nKTsKICAgIH0KCiAgICBAT3ZlcnJpZGUKICAgIHByb3RlY3RlZCBTb3VuZEV2ZW50IGdldEFtYmllbnRTb3VuZCgpIHsKICAgICAgICByZXR1cm4gbnVsbDsKICAgIH0KCiAgICBAT3ZlcnJpZGUKICAgIHByb3RlY3RlZCBTb3VuZEV2ZW50IGdldEh1cnRTb3VuZChEYW1hZ2VTb3VyY2Ugc291cmNlKSB7CiAgICAgICAgcmV0dXJuIG51bGw7CiAgICB9CgogICAgQE92ZXJyaWRlCiAgICBwcm90ZWN0ZWQgU291bmRFdmVudCBnZXREZWF0aFNvdW5kKCkgewogICAgICAgIHJldHVybiBudWxsOwogICAgfQp9Cg=='
           npc = root / 'src/main/java/dev/vincent/northsea/harbor/npc/HarborNpcEntity.java'
-          npc.write_text('''package dev.vincent.northsea.harbor.npc;
-
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.monster.zombie.Zombie;
-import net.minecraft.world.level.Level;
-
-/** A permanent, human-shaped North Sea resident with no vanilla villager model or trading AI. */
-public final class HarborNpcEntity extends Zombie {
-    public HarborNpcEntity(EntityType<? extends Zombie> type, Level level) {
-        super(type, level);
-        setNoAi(true);
-        setInvulnerable(true);
-        setPersistenceRequired();
-    }
-
-    @Override
-    public void tick() {
-        super.tick();
-        setNoAi(true);
-        setRemainingFireTicks(0);
-        setDeltaMovement(0.0D, getDeltaMovement().y, 0.0D);
-        float facing = getYRot();
-        setYHeadRot(facing);
-        setYBodyRot(facing);
-    }
-
-    @Override
-    protected SoundEvent getAmbientSound() {
-        return null;
-    }
-
-    @Override
-    protected SoundEvent getHurtSound(DamageSource source) {
-        return null;
-    }
-
-    @Override
-    protected SoundEvent getDeathSound() {
-        return null;
-    }
-}
-''', encoding='utf-8')
+          npc.write_bytes(base64.b64decode(npc_source))
 
           required = [
               root / 'gradle.properties',
