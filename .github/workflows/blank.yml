@@ -1,66 +1,36 @@
-name: TVD Fabric Phase 4 Build
+# This is a basic workflow to help you get started with Actions
 
+name: CI
+
+# Controls when the workflow will run
 on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: [ "main" ]
   pull_request:
-    branches:
-      - main
+    branches: [ "main" ]
 
-permissions:
-  contents: read
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
 
+# A workflow run is made up of one or more jobs that can run sequentially
 jobs:
+  # This workflow contains a single job called "build"
   build:
+    # The type of runner that the job will run on
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+
+    # Steps represent a sequence of tasks to be executed as part of the job
     steps:
-      - name: Checkout PR
-        uses: actions/checkout@v4
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
 
-      - name: Set up Java 25
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '25'
+      # Runs a single command using the runners shell
+      - name: Run a one-line script
+        run: echo Hello, world!
 
-      - name: Set up Gradle 9.5.1
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.5.1'
-
-      - name: Reconstruct Phase 4 source
-        shell: bash
+      # Runs a set of commands using the runners shell
+      - name: Run a multi-line script
         run: |
-          cat tvd-phase4/chunk_*.b64 | base64 --decode > /tmp/tvd-phase4-source.zip
-          unzip -q /tmp/tvd-phase4-source.zip -d /tmp/tvd-phase4
-          test -f /tmp/tvd-phase4/tvd-fabric-26.2-phase4/build.gradle
-
-      - name: Build Fabric mod
-        working-directory: /tmp/tvd-phase4/tvd-fabric-26.2-phase4
-        shell: bash
-        run: |
-          gradle --no-daemon build --stacktrace > /tmp/tvd-phase4-build.log 2>&1 || {
-            grep -Ei -B 3 -A 10 'error:|FAILURE:|What went wrong|cannot find symbol|does not exist|Could not|Exception' /tmp/tvd-phase4-build.log | tail -n 260 || true
-            exit 1
-          }
-
-      - name: Upload compiler log
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: tvd-phase4-compiler-log
-          path: /tmp/tvd-phase4-build.log
-
-      - name: Collect playable JAR
-        shell: bash
-        run: |
-          mkdir -p artifact
-          cp /tmp/tvd-phase4/tvd-fabric-26.2-phase4/build/libs/tvd-fabric-0.4.0-phase4.jar artifact/
-          jar tf artifact/tvd-fabric-0.4.0-phase4.jar | grep -q fabric.mod.json
-          jar tf artifact/tvd-fabric-0.4.0-phase4.jar | grep -q de/vincent/tvd/vampire/VampirePowerManager.class
-
-      - name: Upload JAR
-        uses: actions/upload-artifact@v4
-        with:
-          name: tvd-fabric-26.2-phase4-jar
-          path: artifact/tvd-fabric-0.4.0-phase4.jar
-          if-no-files-found: error
+          echo Add other actions to build,
+          echo test, and deploy your project.
