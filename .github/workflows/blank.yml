@@ -32,7 +32,17 @@ jobs:
         run: |
           cat tvd-phase3/chunk_*.b64 | base64 --decode > /tmp/tvd-phase3-source.zip
           unzip -q /tmp/tvd-phase3-source.zip -d /tmp/tvd-phase3-source
-          test -f /tmp/tvd-phase3-source/tvd-fabric-26.2-phase3/build.gradle
+          PROJECT=/tmp/tvd-phase3-source/tvd-fabric-26.2-phase3
+          test -f "$PROJECT/build.gradle"
+          sed -i '/import net.minecraft.world.entity.npc.AbstractVillager;/d' "$PROJECT/src/main/java/de/vincent/tvd/vampire/FeedingManager.java"
+          sed -i '/import net.minecraft.world.entity.Entity;/a import net.minecraft.world.entity.EntityType;' "$PROJECT/src/main/java/de/vincent/tvd/vampire/FeedingManager.java"
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('/tmp/tvd-phase3-source/tvd-fabric-26.2-phase3/src/main/java/de/vincent/tvd/vampire/FeedingManager.java')
+          s = p.read_text()
+          s = s.replace('return target instanceof ServerPlayer || target instanceof AbstractVillager;', 'return target instanceof ServerPlayer\n                || target.getType() == EntityType.VILLAGER\n                || target.getType() == EntityType.WANDERING_TRADER;')
+          p.write_text(s)
+          PY
 
       - name: Build Fabric mod
         working-directory: /tmp/tvd-phase3-source/tvd-fabric-26.2-phase3
