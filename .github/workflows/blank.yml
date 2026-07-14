@@ -37,12 +37,15 @@ jobs:
       - name: Build Fabric mod
         working-directory: /tmp/tvd-source/tvd-fabric-26.2-phase1
         shell: bash
-        run: |
-          if ! gradle --no-daemon build --stacktrace > /tmp/tvd-build.log 2>&1; then
-            echo '===== RELEVANT BUILD ERRORS ====='
-            grep -Ei -B 3 -A 8 'error:|FAILURE:|What went wrong|cannot find symbol|does not exist|Could not|Exception' /tmp/tvd-build.log | tail -n 220 || true
-            exit 1
-          fi
+        run: gradle --no-daemon build --stacktrace > /tmp/tvd-build.log 2>&1
+
+      - name: Upload compiler log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tvd-fabric-compiler-log
+          path: /tmp/tvd-build.log
+          if-no-files-found: error
 
       - name: Collect playable JAR
         shell: bash
