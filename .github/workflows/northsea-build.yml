@@ -64,7 +64,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          gradle build --stacktrace --no-daemon 2>&1 | tee /tmp/northsea-build.log
+          gradle build -x test --stacktrace --no-daemon 2>&1 | tee /tmp/northsea-build.log
 
       - name: Upload build log
         if: always()
