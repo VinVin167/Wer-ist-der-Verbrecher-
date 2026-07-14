@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - northsea-build-0.5.3
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
