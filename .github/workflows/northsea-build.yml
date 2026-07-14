@@ -34,10 +34,10 @@ jobs:
 
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           root = Path('project')
 
-          # Minecraft 26.2 moved zombie classes into the monster.zombie package.
           for path in [
               root / 'src/main/java/dev/vincent/northsea/harbor/npc/HarborNpcEntity.java',
               root / 'src/main/java/dev/vincent/northsea/harbor/npc/HarborNpcTypes.java',
@@ -47,7 +47,6 @@ jobs:
                                   'net.minecraft.world.entity.monster.zombie.Zombie')
               path.write_text(text, encoding='utf-8')
 
-          # Restore imports that were omitted while splitting the custom-NPC patch.
           imports = {
               root / 'src/main/java/dev/vincent/northsea/harbor/market/MarketService.java': [
                   'import dev.vincent.northsea.harbor.npc.HarborNpcEntity;',
@@ -68,8 +67,6 @@ jobs:
                   text = text.replace(anchor, anchor + additions, 1)
               path.write_text(text, encoding='utf-8')
 
-          # 26.2 groups colored block variants into collections. Keep the detailed city
-          # while using the supported collection API and stable decorative substitutes.
           city = root / 'src/main/java/dev/vincent/northsea/harbor/world/CityBlueprint.java'
           text = city.read_text(encoding='utf-8')
           replacements = {
@@ -88,12 +85,27 @@ jobs:
               text = text.replace(old, new)
           city.write_text(text, encoding='utf-8')
 
-          grep_targets = [
+          # Entity tags were renamed in 26.2. The NPC is frozen, so retain the fixed
+          # body rotation directly rather than scanning tags every tick.
+          npc = root / 'src/main/java/dev/vincent/northsea/harbor/npc/HarborNpcEntity.java'
+          text = npc.read_text(encoding='utf-8')
+          text, count = re.subn(
+              r'''\s*for \(String tag : getTags\(\)\) \{.*?\n\s*\}\n\s*\}''',
+              '''\n        float facing = getYRot();\n        setYHeadRot(facing);\n        setYBodyRot(facing);\n    }''',
+              text,
+              count=1,
+              flags=re.S,
+          )
+          if count != 1:
+              raise SystemExit('Could not replace obsolete NPC tag scan')
+          npc.write_text(text, encoding='utf-8')
+
+          required = [
               root / 'gradle.properties',
               root / 'src/main/java/dev/vincent/northsea/harbor/npc/HarborNpcEntity.java',
               root / 'src/client/java/dev/vincent/northsea/harbor/client/npc/HarborNpcRenderer.java',
           ]
-          for path in grep_targets:
+          for path in required:
               if not path.exists():
                   raise SystemExit(f'Missing required 0.5.6 file: {path}')
           PY
