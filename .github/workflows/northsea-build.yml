@@ -34,18 +34,15 @@ jobs:
 
           python3 - <<'PY'
           from pathlib import Path
-          import re
 
           root = Path('project')
 
-          for path in [
-              root / 'src/main/java/dev/vincent/northsea/harbor/npc/HarborNpcEntity.java',
-              root / 'src/main/java/dev/vincent/northsea/harbor/npc/HarborNpcTypes.java',
-          ]:
-              text = path.read_text(encoding='utf-8')
-              text = text.replace('net.minecraft.world.entity.monster.Zombie',
-                                  'net.minecraft.world.entity.monster.zombie.Zombie')
-              path.write_text(text, encoding='utf-8')
+          types = root / 'src/main/java/dev/vincent/northsea/harbor/npc/HarborNpcTypes.java'
+          text = types.read_text(encoding='utf-8').replace(
+              'net.minecraft.world.entity.monster.Zombie',
+              'net.minecraft.world.entity.monster.zombie.Zombie'
+          )
+          types.write_text(text, encoding='utf-8')
 
           imports = {
               root / 'src/main/java/dev/vincent/northsea/harbor/market/MarketService.java': [
@@ -85,24 +82,55 @@ jobs:
               text = text.replace(old, new)
           city.write_text(text, encoding='utf-8')
 
-          # Entity tags were renamed in 26.2. The NPC is frozen, so retain the fixed
-          # body rotation directly rather than scanning tags every tick.
           npc = root / 'src/main/java/dev/vincent/northsea/harbor/npc/HarborNpcEntity.java'
-          text = npc.read_text(encoding='utf-8')
-          text, count = re.subn(
-              r'''\s*for \(String tag : getTags\(\)\) \{.*?\n\s*\}\n\s*\}''',
-              '''\n        float facing = getYRot();\n        setYHeadRot(facing);\n        setYBodyRot(facing);\n    }''',
-              text,
-              count=1,
-              flags=re.S,
-          )
-          if count != 1:
-              raise SystemExit('Could not replace obsolete NPC tag scan')
-          npc.write_text(text, encoding='utf-8')
+          npc.write_text('''package dev.vincent.northsea.harbor.npc;
+
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.monster.zombie.Zombie;
+import net.minecraft.world.level.Level;
+
+/** A permanent, human-shaped North Sea resident with no vanilla villager model or trading AI. */
+public final class HarborNpcEntity extends Zombie {
+    public HarborNpcEntity(EntityType<? extends Zombie> type, Level level) {
+        super(type, level);
+        setNoAi(true);
+        setInvulnerable(true);
+        setPersistenceRequired();
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        setNoAi(true);
+        setRemainingFireTicks(0);
+        setDeltaMovement(0.0D, getDeltaMovement().y, 0.0D);
+        float facing = getYRot();
+        setYHeadRot(facing);
+        setYBodyRot(facing);
+    }
+
+    @Override
+    protected SoundEvent getAmbientSound() {
+        return null;
+    }
+
+    @Override
+    protected SoundEvent getHurtSound(DamageSource source) {
+        return null;
+    }
+
+    @Override
+    protected SoundEvent getDeathSound() {
+        return null;
+    }
+}
+''', encoding='utf-8')
 
           required = [
               root / 'gradle.properties',
-              root / 'src/main/java/dev/vincent/northsea/harbor/npc/HarborNpcEntity.java',
+              npc,
               root / 'src/client/java/dev/vincent/northsea/harbor/client/npc/HarborNpcRenderer.java',
           ]
           for path in required:
