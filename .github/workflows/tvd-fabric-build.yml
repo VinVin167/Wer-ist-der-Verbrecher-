@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - temp-tvd-fabric-build-20260714
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
