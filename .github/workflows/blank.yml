@@ -1,36 +1,69 @@
-# This is a basic workflow to help you get started with Actions
+name: TVD Fabric Phase 3 Build
 
-name: CI
-
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
-  push:
-    branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+permissions:
+  contents: read
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   build:
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
+    timeout-minutes: 30
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      - name: Checkout PR
+        uses: actions/checkout@v4
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      - name: Set up Gradle 9.5.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.1'
+
+      - name: Reconstruct Phase 3 source
+        shell: bash
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          cat tvd-phase3/chunk_*.b64 | base64 --decode > /tmp/tvd-phase3-source.zip
+          unzip -q /tmp/tvd-phase3-source.zip -d /tmp/tvd-phase3-source
+          test -f /tmp/tvd-phase3-source/tvd-fabric-26.2-phase3/build.gradle
+
+      - name: Build Fabric mod
+        working-directory: /tmp/tvd-phase3-source/tvd-fabric-26.2-phase3
+        shell: bash
+        run: |
+          gradle --no-daemon build --stacktrace > /tmp/tvd-phase3-build.log 2>&1 || {
+            cat /tmp/tvd-phase3-build.log
+            exit 1
+          }
+
+      - name: Upload compiler log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tvd-phase3-compiler-log
+          path: /tmp/tvd-phase3-build.log
+          if-no-files-found: ignore
+
+      - name: Collect playable JAR
+        if: success()
+        shell: bash
+        run: |
+          mkdir -p artifact
+          cp /tmp/tvd-phase3-source/tvd-fabric-26.2-phase3/build/libs/tvd-fabric-0.3.0-phase3.jar artifact/
+          jar tf artifact/tvd-fabric-0.3.0-phase3.jar | grep -q fabric.mod.json
+          jar tf artifact/tvd-fabric-0.3.0-phase3.jar | grep -q de/vincent/tvd/vampire/FeedingManager.class
+
+      - name: Upload JAR
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tvd-fabric-26.2-phase3-jar
+          path: artifact/tvd-fabric-0.3.0-phase3.jar
+          if-no-files-found: error
