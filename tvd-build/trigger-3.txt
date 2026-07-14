@@ -1,0 +1,1 @@
+Trigger concise compiler diagnostics.
