@@ -1,36 +1,54 @@
-# This is a basic workflow to help you get started with Actions
+name: Temporary TVD Fabric Phase 1 Build
 
-name: CI
-
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
-  push:
-    branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+permissions:
+  contents: read
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   build:
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
+    timeout-minutes: 30
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      - name: Checkout PR
+        uses: actions/checkout@v4
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      - name: Set up Gradle 9.5.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.1'
+
+      - name: Reconstruct source archive
+        shell: bash
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          cat tvd-build/chunk_*.b64 | base64 --decode > /tmp/tvd-source.zip
+          unzip -q /tmp/tvd-source.zip -d /tmp/tvd-source
+          test -f /tmp/tvd-source/tvd-fabric-26.2-phase1/build.gradle
+
+      - name: Build Fabric mod
+        working-directory: /tmp/tvd-source/tvd-fabric-26.2-phase1
+        run: gradle --no-daemon build --stacktrace
+
+      - name: Collect playable JAR
+        shell: bash
+        run: |
+          mkdir -p artifact
+          cp /tmp/tvd-source/tvd-fabric-26.2-phase1/build/libs/tvd-fabric-0.1.0-phase1.jar artifact/
+          jar tf artifact/tvd-fabric-0.1.0-phase1.jar | grep -q fabric.mod.json
+          ls -lh artifact/
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: tvd-fabric-26.2-phase1-jar
+          path: artifact/tvd-fabric-0.1.0-phase1.jar
+          if-no-files-found: error
