@@ -29,61 +29,52 @@ jobs:
           unzip -q /tmp/northsea-source.zip -d project
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           build = Path('project/build.gradle')
           text = build.read_text(encoding='utf-8')
-          cycle = '''sourceSets {
-              main {
-                  compileClasspath += sourceSets.client.output
-                  runtimeClasspath += sourceSets.client.output
-              }
-          }
-
-          '''
-          if cycle not in text:
-              raise SystemExit('Expected circular sourceSets block was not found')
-          build.write_text(text.replace(cycle, ''), encoding='utf-8')
+          text, count = re.subn(
+              r'(?ms)^sourceSets\s*\{\s*main\s*\{.*?^\s*\}\s*^\}\s*',
+              '',
+              text,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit('Could not remove circular sourceSets block')
+          build.write_text(text, encoding='utf-8')
 
           runtime = Path('project/src/main/java/dev/vincent/northsea/harbor/runtime/HarborRuntime.java')
           text = runtime.read_text(encoding='utf-8')
-          old = 'Path worldRoot = server.getWorldPath(LevelResource.ROOT);\n            String folder = worldRoot.getFileName().toString();'
-          new = 'Path worldRoot = server.getWorldPath(LevelResource.ROOT).normalize();\n            String folder = worldRoot.getFileName().toString();'
-          if old not in text:
-              raise SystemExit('Expected world-root code was not found')
-          runtime.write_text(text.replace(old, new), encoding='utf-8')
+          text, count = re.subn(
+              r'server\.getWorldPath\(LevelResource\.ROOT\)(?!\.normalize\(\))',
+              'server.getWorldPath(LevelResource.ROOT).normalize()',
+              text,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit('Could not normalize the integrated-server world path')
+          runtime.write_text(text, encoding='utf-8')
 
           activation = Path('project/src/main/java/dev/vincent/northsea/harbor/storage/WorldActivationStore.java')
           text = activation.read_text(encoding='utf-8')
-          old = '''        if (selection == null || isExpired(selection)) {
-              return false;
-          }
-          if (selection.worldFolder.equals(worldFolder)) {
-              return true;
-          }
-          if (!selection.enabled || worldRoot == null) {
-              return false;
-          }
-          '''
-          new = '''        if (selection == null) {
-              return false;
-          }
-          // An exact save-folder match is durable. Only fuzzy renamed-folder matching expires.
-          if (selection.worldFolder.equals(worldFolder)) {
-              return true;
-          }
-          if (isExpired(selection) || !selection.enabled || worldRoot == null) {
-              return false;
-          }
-          '''
-          if old not in text:
-              raise SystemExit('Expected activation matching code was not found')
-          activation.write_text(text.replace(old, new), encoding='utf-8')
+          text, count = re.subn(
+              r'''if \(selection == null \|\| isExpired\(selection\)\) \{\s*return false;\s*\}\s*if \(selection\.worldFolder\.equals\(worldFolder\)\) \{\s*return true;\s*\}\s*if \(!selection\.enabled \|\| worldRoot == null\) \{\s*return false;\s*\}''',
+              '''if (selection == null) {\n            return false;\n        }\n        // Exact folder selections stay valid; only fuzzy renamed-folder matching expires.\n        if (selection.worldFolder.equals(worldFolder)) {\n            return true;\n        }\n        if (isExpired(selection) || !selection.enabled || worldRoot == null) {\n            return false;\n        }''',
+              text,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit('Could not update activation matching')
+          activation.write_text(text, encoding='utf-8')
 
           props = Path('project/gradle.properties')
           text = props.read_text(encoding='utf-8')
-          if 'mod_version=0.5.3' not in text:
-              raise SystemExit('Expected old mod version was not found')
-          props.write_text(text.replace('mod_version=0.5.3', 'mod_version=0.5.4'), encoding='utf-8')
+          text, count = re.subn(r'^mod_version=.*$', 'mod_version=0.5.4', text, count=1, flags=re.M)
+          if count != 1:
+              raise SystemExit('Could not update mod version')
+          props.write_text(text, encoding='utf-8')
+
+          print('Patched NorthSea Harbor source for 0.5.4')
           PY
 
       - name: Set up Java 25
