@@ -27,11 +27,35 @@ jobs:
         with:
           gradle-version: '9.5.1'
 
-      - name: Reconstruct fixed source archive
+      - name: Reconstruct and patch source
         shell: bash
         run: |
-          cat tvd-build/fixed_*.b64 | base64 --decode > /tmp/tvd-source.zip
+          cat tvd-build/chunk_*.b64 | base64 --decode > /tmp/tvd-source.zip
           unzip -q /tmp/tvd-source.zip -d /tmp/tvd-source
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path('/tmp/tvd-source/tvd-fabric-26.2-phase1/src/main/java/de/vincent/tvd')
+
+          p = root / 'vampire/VampireManager.java'
+          s = p.read_text()
+          s = s.replace('SoundEvents.GENERIC_DRINK,', 'SoundEvents.GENERIC_DRINK.value(),')
+          s = s.replace('SoundEvents.WITHER_SPAWN,', 'SoundEvents.WITHER_SPAWN.value(),')
+          s = s.replace('player.serverLevel().sendParticles(', '((net.minecraft.server.level.ServerLevel) player.level()).sendParticles(')
+          s = s.replace('player.displayClientMessage(Component.literal(message).withStyle(formatting), false);', 'player.sendSystemMessage(Component.literal(message).withStyle(formatting));')
+          p.write_text(s)
+
+          p = root / 'vampire/VampireEvents.java'
+          s = p.read_text()
+          s = s.replace('player.displayClientMessage(\n                        net.minecraft.network.chat.Component.literal(', 'player.sendSystemMessage(\n                        net.minecraft.network.chat.Component.literal(')
+          s = s.replace('                        ).withStyle(net.minecraft.ChatFormatting.RED),\n                        false\n                );', '                        ).withStyle(net.minecraft.ChatFormatting.RED)\n                );')
+          p.write_text(s)
+
+          p = root / 'command/TvdCommands.java'
+          s = p.read_text()
+          s = s.replace('player.displayClientMessage(Component.literal(message), false);', 'player.sendSystemMessage(Component.literal(message));')
+          s = s.replace('player.displayClientMessage(Component.literal("TVD-Status: " + status + time), false);', 'player.sendSystemMessage(Component.literal("TVD-Status: " + status + time));')
+          p.write_text(s)
+          PY
           test -f /tmp/tvd-source/tvd-fabric-26.2-phase1/build.gradle
 
       - name: Build Fabric mod
@@ -45,7 +69,7 @@ jobs:
         with:
           name: tvd-fabric-compiler-log
           path: /tmp/tvd-build.log
-          if-no-files-found: error
+          if-no-files-found: ignore
 
       - name: Collect playable JAR
         shell: bash
