@@ -34,6 +34,7 @@ jobs:
           unzip -q /tmp/tvd-phase1.zip -d /tmp/tvd-source
           cat phase2-build/patch_*.b64 | base64 --decode > /tmp/tvd-phase2-overlay.zip
           unzip -qo /tmp/tvd-phase2-overlay.zip -d /tmp/tvd-source
+          python "$GITHUB_WORKSPACE/phase2-build/fix_26_2.py" /tmp/tvd-source/tvd-fabric-26.2-phase1
           test -f /tmp/tvd-source/tvd-fabric-26.2-phase1/src/main/java/de/vincent/tvd/vampire/BloodManager.java
 
       - name: Build Fabric mod
