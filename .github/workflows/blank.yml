@@ -39,7 +39,6 @@ jobs:
           p = root / 'vampire/VampireManager.java'
           s = p.read_text()
           s = s.replace('SoundEvents.GENERIC_DRINK,', 'SoundEvents.GENERIC_DRINK.value(),')
-          s = s.replace('SoundEvents.WITHER_SPAWN,', 'SoundEvents.WITHER_SPAWN.value(),')
           s = s.replace('player.serverLevel().sendParticles(', '((net.minecraft.server.level.ServerLevel) player.level()).sendParticles(')
           s = s.replace('player.displayClientMessage(Component.literal(message).withStyle(formatting), false);', 'player.sendSystemMessage(Component.literal(message).withStyle(formatting));')
           p.write_text(s)
