@@ -1,0 +1,1 @@
+Use updated Phase 2 workflow with Minecraft 26.2 compatibility patch.
