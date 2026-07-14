@@ -28,6 +28,26 @@ jobs:
           mkdir -p project
           unzip -q /tmp/northsea-source.zip -d project
 
+      - name: Fix Gradle source-set cycle
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('project/build.gradle')
+          text = path.read_text(encoding='utf-8')
+          bad = '''sourceSets {
+              main {
+                  compileClasspath += sourceSets.client.output
+                  runtimeClasspath += sourceSets.client.output
+              }
+          }
+
+          '''
+          if bad not in text:
+              raise SystemExit('Expected circular sourceSets block was not found')
+          path.write_text(text.replace(bad, ''), encoding='utf-8')
+          PY
+
       - name: Set up Java 25
         uses: actions/setup-java@v4
         with:
